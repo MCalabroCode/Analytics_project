@@ -57,7 +57,7 @@ def analyze_country(country_code, country_name):
     # Load the data and calculate degrees
     degrees_per_year = {}
     for year in range(2009, 2020):
-        data = pd.read_csv(f'../data/io_tables/{country_code}{year}ttl.csv', index_col=0)
+        data = pd.read_csv(f'data/io_tables/{country_code}{year}ttl.csv', index_col=0)
         data = data.iloc[:n, :n] 
         data.index = data.index.str.replace("TTL_", "", regex=False)
         in_degree = data.sum(axis=0)
