@@ -1,0 +1,11 @@
+in 2009 aggregate volatility decays no faster than n^0.3140880324346484
+in 2010 aggregate volatility decays no faster than n^0.3111581679415928
+in 2011 aggregate volatility decays no faster than n^0.30334180311843956
+in 2012 aggregate volatility decays no faster than n^0.3096909322007378
+in 2013 aggregate volatility decays no faster than n^0.3116665588245683
+in 2014 aggregate volatility decays no faster than n^0.3151829722208703
+in 2015 aggregate volatility decays no faster than n^0.3154028325826444
+in 2016 aggregate volatility decays no faster than n^0.3197208476078453
+in 2017 aggregate volatility decays no faster than n^0.3185738352255291
+in 2018 aggregate volatility decays no faster than n^0.31751390347386216
+in 2019 aggregate volatility decays no faster than n^0.3205149941720935
