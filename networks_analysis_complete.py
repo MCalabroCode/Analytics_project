@@ -216,8 +216,10 @@ def analyze_country(country_code, country_name):
 
     # First pass: find all top 5 sectors across years
     for year in degrees_per_year:
-        top5 = degrees_per_year[year]['First-Order Degree'].sort_values(ascending=False).head(5).index.tolist()
-        used_sectors.update(top5)
+        top5_first_order = degrees_per_year[year]['First-Order Degree'].sort_values(ascending=False).head(5).index.tolist()
+        used_sectors.update(top5_first_order)
+        top5_second_order = degrees_per_year[year]['Second-Order Degree'].sort_values(ascending=False).head(5).index.tolist()
+        used_sectors.update(top5_second_order)
 
     used_sectors = sorted(used_sectors)  # consistent order
 
@@ -231,35 +233,47 @@ def analyze_country(country_code, country_name):
 
     def plot_top_sectors():
         years = list(degrees_per_year.keys())
-        plot = np.zeros((len(years), 5), dtype=int)
+        plot_first_order = np.zeros((len(years), 5), dtype=int)
+        plot_second_order = np.zeros((len(years), 5), dtype=int)
         for i, year in enumerate(years):
             top_sectors = degrees_per_year[year]['First-Order Degree'].sort_values(ascending=False).head(5).index.tolist()
             for j, sector in enumerate(top_sectors):
-                plot[i, j] = sector_to_index[sector] # index of the corresponding sector
+                plot_first_order[i, j] = sector_to_index[sector] # index of the corresponding sector
+            top_sectors = degrees_per_year[year]['Second-Order Degree'].sort_values(ascending=False).head(5).index.tolist()
+            for j, sector in enumerate(top_sectors):
+                plot_second_order[i, j] = sector_to_index[sector] # index of the corresponding sector
 
-        fig, ax = plt.subplots(figsize=(8,  0.5*len(years)))
-        im = ax.pcolormesh(plot, edgecolors='w', linewidth=3, cmap=color_map)
+        fig, axs = plt.subplots(1, 2, figsize=(12,  0.6*len(years)), sharey=True)
+        axs[0].pcolormesh(plot_first_order, edgecolors='w', linewidth=5, cmap=color_map)
+        axs[1].pcolormesh(plot_second_order, edgecolors='w', linewidth=5, cmap=color_map)
 
         # Remove black outer border
-        for spine in ax.spines.values():
+        for spine in axs[0].spines.values():
+            spine.set_visible(False)
+        for spine in axs[1].spines.values():
             spine.set_visible(False)
 
         # Set ticks and labels
-        ax.set_xticks(np.arange(5)+0.5) # +0.5 to center the ticks
-        ax.set_xticklabels([f'Top {i+1}' for i in range(5)])
-        ax.set_yticks(np.arange(len(years))+0.5)
-        ax.set_yticklabels(years)
+        axs[0].set_xticks(np.arange(5)+0.5) # +0.5 to center the ticks
+        axs[0].set_xticklabels([f'Top {i+1}' for i in range(5)])
+        axs[0].set_yticks(np.arange(len(years))+0.5)
+        axs[0].set_yticklabels(years)
+        axs[1].set_xticks(np.arange(5)+0.5) # +0.5 to center the ticks
+        axs[1].set_xticklabels([f'Top {i+1}' for i in range(5)])
+        #axs[1].set_yticks(np.arange(len(years))+0.5)
+        #axs[1].set_yticklabels(years)
 
         # Create legend
         legend_elements = [
             Patch(facecolor=color_map(i), label=economic_sectors[index_to_sector[i]])
             for i in range(len(used_sectors))
         ]
-        ax.legend(handles=legend_elements, bbox_to_anchor=(1.05, 1), loc='upper left', frameon=False, fontsize=10)
-        ax.set_title(f'Top 5 Sectors by First-Order Degree - {country_name}', pad=15, loc='left')
+        axs[1].legend(handles=legend_elements, bbox_to_anchor=(1.05, 1), loc='upper left', frameon=False, fontsize=10)
+        axs[0].set_title(f'Top 5 Sectors by First-Order Degree', pad=15, loc='center')
+        axs[1].set_title(f'Top 5 Sectors by Second-Order Degree', pad=15, loc='center')
+        fig.suptitle(f'Top Sectors by Output Degrees - {country_name}', fontsize=14)
         plt.tight_layout()
         save_plot("top_sectors_output_degrees")
-        plt.show()
 
     plot_top_sectors()
 
