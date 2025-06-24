@@ -224,7 +224,7 @@ def analyze_country(country_code, country_name):
     used_sectors = sorted(used_sectors)  # consistent order
 
     # Assign unique indices and colors to ONLY the used sectors
-    palette = sns.color_palette("managua", n_colors=len(used_sectors)) # palette for used sectors
+    palette = sns.color_palette("plasma", n_colors=len(used_sectors)) # palette for used sectors
     sector_to_index = {sector: i for i, sector in enumerate(used_sectors)} # map sector to an unique index
     sector_to_color = {sector: palette[i] for i, sector in enumerate(used_sectors)} # map sector to a color, via palette
     index_to_sector = {i: sector for sector, i in sector_to_index.items()} # this is the reverse mapping, for the legend
