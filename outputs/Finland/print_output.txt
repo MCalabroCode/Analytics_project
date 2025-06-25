@@ -1,3 +1,12 @@
+in 2000 aggregate volatility decays no faster than n^0.24328408015198572
+in 2001 aggregate volatility decays no faster than n^0.2437683339286925
+in 2002 aggregate volatility decays no faster than n^0.24942834813500375
+in 2003 aggregate volatility decays no faster than n^0.24953206862383606
+in 2004 aggregate volatility decays no faster than n^0.2467981604117265
+in 2005 aggregate volatility decays no faster than n^0.2514174141296464
+in 2006 aggregate volatility decays no faster than n^0.24974832658730986
+in 2007 aggregate volatility decays no faster than n^0.24909729942092634
+in 2008 aggregate volatility decays no faster than n^0.25278211478666346
 in 2009 aggregate volatility decays no faster than n^0.25745857844061926
 in 2010 aggregate volatility decays no faster than n^0.25220074048615204
 in 2011 aggregate volatility decays no faster than n^0.2542904189170556
