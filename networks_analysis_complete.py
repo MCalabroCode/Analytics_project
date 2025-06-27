@@ -33,6 +33,8 @@ countries = {
     'LVA': 'Latvia',
     'CHN': 'China',
     'NZL': 'New Zealand',
+    'DEU': 'Germany',
+    'IND': 'India'
 }
 
 def analyze_country(country_code, country_name):
@@ -56,12 +58,13 @@ def analyze_country(country_code, country_name):
 
     # Load the data and calculate degrees
     degrees_per_year = {}
-    for year in range(2009, 2020):
+    for year in range(2000, 2020):
         data = pd.read_csv(f'data/io_tables/{country_code}{year}ttl.csv', index_col=0)
         data = data.iloc[:n, :n] 
         data.index = data.index.str.replace("TTL_", "", regex=False)
         in_degree = data.sum(axis=0)
         W = data.div(data.sum(axis=0), axis=1).fillna(0) # column normrmalization (not necessary actually)
+        # W = data #TODO: inportant!
         first_order_degrees = W.sum(axis=1) # first order degree (out-degree)
         second_order_degrees = W.mul(first_order_degrees, axis=0).sum(axis=0) # second order degree
         first_order_degrees.name = 'First-Order Degree'
@@ -71,7 +74,8 @@ def analyze_country(country_code, country_name):
         degrees_per_year[year] = degrees
 
     # plot stuff
-    years = [str(year) for year in degrees_per_year.keys()]
+    selected_years = sorted(list(degrees_per_year.keys()))[::2] # NOTE: to avoid overlaps in plots we just take one year every two years
+    years = [str(year) for year in selected_years] # NOTE: before this was [str(year) for year in degrees_per_year.keys()]
     colors = [cmap(i / (len(years) - 1)) for i in range(len(years))]
 
     # ======================================================== indegree analysis
@@ -87,8 +91,8 @@ def analyze_country(country_code, country_name):
         plt.xlabel('Weighted In-Degree')
         plt.ylabel('Density')
         plt.grid(True, which="both", ls="--", linewidth=linewidth)
-        for i, (year, degrees) in enumerate(degrees_per_year.items()):
-            in_degrees = degrees['In-Degree']
+        for i, year in enumerate(selected_years): #
+            in_degrees = degrees_per_year[year]['In-Degree']
             ax = sns.kdeplot(in_degrees, fill=False, color=colors[i], linewidth=0.8, label=str(year))
         plt.tight_layout()
         plt.legend(title='Year', frameon=False)
@@ -121,11 +125,11 @@ def analyze_country(country_code, country_name):
 
     # out-degrees (first and second order) visualization and analysis**
     def plot_output_degrees_density():
-        fig, axes = plt.subplots(1, 2, figsize=(10, 5), sharey=True)
+        fig, axes = plt.subplots(1, 2, figsize=(10, 5), sharey=False)
 
         # First-order degree plot
-        for i, (year, degrees) in enumerate(degrees_per_year.items()):
-            first_order_degrees = degrees['First-Order Degree']
+        for i, year in enumerate(selected_years):
+            first_order_degrees = degrees_per_year[year]['First-Order Degree']
             sns.kdeplot(first_order_degrees, fill=False, color=colors[i], label=str(year), linewidth=0.8, ax=axes[0])
         axes[0].set_title('First-Order Output Degrees')
         axes[0].set_xlabel('Degree Value')
@@ -133,8 +137,8 @@ def analyze_country(country_code, country_name):
         axes[0].grid(True, which="both", ls="--", linewidth=linewidth)
 
         # Second-order degree plot
-        for i, (year, degrees) in enumerate(degrees_per_year.items()):
-            second_order_degrees = degrees['Second-Order Degree']
+        for i, year in enumerate(selected_years):
+            second_order_degrees = degrees_per_year[year]['Second-Order Degree']
             sns.kdeplot(second_order_degrees, fill=False, color=colors[i], label=str(year), linewidth=0.8, ax=axes[1])
         axes[1].set_title('Second-Order Output Degrees')
         axes[1].set_xlabel('Degree Value')
@@ -224,7 +228,7 @@ def analyze_country(country_code, country_name):
     used_sectors = sorted(used_sectors)  # consistent order
 
     # Assign unique indices and colors to ONLY the used sectors
-    palette = sns.color_palette("plasma", n_colors=len(used_sectors)) # palette for used sectors
+    palette = sns.color_palette("terrain", n_colors=len(used_sectors)) # palette for used sectors - terrain, tab20
     sector_to_index = {sector: i for i, sector in enumerate(used_sectors)} # map sector to an unique index
     sector_to_color = {sector: palette[i] for i, sector in enumerate(used_sectors)} # map sector to a color, via palette
     index_to_sector = {i: sector for sector, i in sector_to_index.items()} # this is the reverse mapping, for the legend
@@ -291,9 +295,9 @@ def analyze_country(country_code, country_name):
     def plot_ccdf_outer_degrees():
     
         fig, axs = plt.subplots(1, 2, figsize=(10, 6), sharey=True)
-        for i, (year, degrees) in enumerate(degrees_per_year.items()):
-            x1, y1 = compute_ccdf_direct(degrees['First-Order Degree'])
-            x2, y2 = compute_ccdf_direct(degrees['Second-Order Degree'])
+        for i, year in enumerate(selected_years):
+            x1, y1 = compute_ccdf_direct(degrees_per_year[year]['First-Order Degree'])
+            x2, y2 = compute_ccdf_direct(degrees_per_year[year]['Second-Order Degree'])
 
             axs[0].loglog(x1, y1, marker='.', linestyle='-', color = colors[i], label=str(year), linewidth=0.8, alpha=0.5, mew=0.2)
             axs[1].loglog(x2, y2, marker='.', linestyle='-', color = colors[i], label=str(year), linewidth=0.8, alpha=0.5, mew=0.2)
@@ -306,7 +310,7 @@ def analyze_country(country_code, country_name):
         axs[1].set_xlabel('Degree')
         #axs[1].set_ylabel('1 - CDF (CCDF)')
         axs[1].grid(True, which="both", ls="--", linewidth=linewidth)
-        plt.legend([str(year) for year in degrees_per_year.keys()], title='Year', frameon=False)
+        plt.legend([str(year) for year in selected_years], title='Year', frameon=False)
         plt.suptitle('CCDF of Outer Degrees - ' + country_name)
         plt.tight_layout()
         save_plot("ccdf_outer_degrees")
@@ -416,7 +420,7 @@ def analyze_country(country_code, country_name):
         print(f"in {year} aggregate volatility decays no faster than n^{(1+aus)/np.sqrt(n)}")
         CV.append(aus)
     CV = np.array(CV)
-    fig = plt.figure(figsize=(8, 5))
+    fig = plt.figure(figsize=(10, 5))
     plt.plot(list(degrees_per_year.keys()), CV, marker='o', linestyle='-', markersize=4, color=colors[2], linewidth=1.2, alpha=0.7)
     plt.title('Coefficient of Variation of First-Order Degree - ' + country_name)
     plt.xlabel('Year')
