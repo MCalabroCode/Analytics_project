@@ -18,3 +18,4 @@ in 2016 aggregate volatility decays no faster than n^0.2577567565106291
 in 2017 aggregate volatility decays no faster than n^0.2558558920583554
 in 2018 aggregate volatility decays no faster than n^0.2612743174327145
 in 2019 aggregate volatility decays no faster than n^0.26354624432168516
+-------------------------------------- Finland -------------------------------------------------

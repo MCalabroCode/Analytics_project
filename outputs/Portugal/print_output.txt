@@ -18,3 +18,4 @@ in 2016 aggregate volatility decays no faster than n^0.2947185650845633
 in 2017 aggregate volatility decays no faster than n^0.28814708742683753
 in 2018 aggregate volatility decays no faster than n^0.2908372895182116
 in 2019 aggregate volatility decays no faster than n^0.2907311219198851
+-------------------------------------- Portugal -------------------------------------------------

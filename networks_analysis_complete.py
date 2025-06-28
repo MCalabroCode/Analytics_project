@@ -72,7 +72,7 @@ def analyze_country(country_code, country_name):
 
     # This code saves all print output to a file instead of displaying it on the screen
     import sys
-    sys.stdout = open(os.path.join(output_dir, "print_output.txt"), "w")
+    #sys.stdout = open(os.path.join(output_dir, "print_output.txt"), "w")
 
     # Load the data and calculate degrees
     degrees_per_year = {}
@@ -435,7 +435,7 @@ def analyze_country(country_code, country_name):
     CV = []
     for year, degrees in degrees_per_year.items():
         aus = (1/np.mean(degrees['First-Order Degree']))*np.var(degrees['First-Order Degree'], ddof=1)
-        print(f"in {year} aggregate volatility decays no faster than n^{(1+aus)/np.sqrt(n)}")
+        #print(f"in {year} aggregate volatility decays no faster than n^{(1+aus)/np.sqrt(n)}")
         CV.append(aus)
     CV = np.array(CV)
     fig = plt.figure(figsize=(10, 5))
@@ -449,9 +449,10 @@ def analyze_country(country_code, country_name):
     save_plot("CV")
 
     # ======================================================== carbon taxes vs graph centralities
-    if country_name in ['New Zealand', 'Italy', 'India', 'Germany', 'China']:
+    if country_name in ['New Zealand', 'Italy', 'India', 'Germany', 'China', 'Latvia']:
         pass
     else:
+        print(f'-------------------------------------- {country_name} -------------------------------------------------')
         # sector of interest for carbon taxes
         sectors = ["D","C19","C24","C23","B05_06","C20","H49","F","B07_08"]
 

@@ -18,3 +18,4 @@ in 2016 aggregate volatility decays no faster than n^0.2732381383683762
 in 2017 aggregate volatility decays no faster than n^0.27199783952233125
 in 2018 aggregate volatility decays no faster than n^0.2710594901042076
 in 2019 aggregate volatility decays no faster than n^0.27296876117341573
+-------------------------------------- Norway -------------------------------------------------
