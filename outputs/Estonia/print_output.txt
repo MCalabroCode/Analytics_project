@@ -18,4 +18,3 @@ in 2016 aggregate volatility decays no faster than n^0.279041338266071
 in 2017 aggregate volatility decays no faster than n^0.2775794773989492
 in 2018 aggregate volatility decays no faster than n^0.2788596433794205
 in 2019 aggregate volatility decays no faster than n^0.2835426549401879
--------------------------------------- Estonia -------------------------------------------------

@@ -18,4 +18,3 @@ in 2016 aggregate volatility decays no faster than n^0.2699437921771489
 in 2017 aggregate volatility decays no faster than n^0.2731892058994861
 in 2018 aggregate volatility decays no faster than n^0.271513234840016
 in 2019 aggregate volatility decays no faster than n^0.2731468844496384
--------------------------------------- Sweden -------------------------------------------------

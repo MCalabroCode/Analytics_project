@@ -18,4 +18,3 @@ in 2016 aggregate volatility decays no faster than n^0.3731523460798114
 in 2017 aggregate volatility decays no faster than n^0.3675988629403916
 in 2018 aggregate volatility decays no faster than n^0.36044531021168374
 in 2019 aggregate volatility decays no faster than n^0.35868303925188166
--------------------------------------- Switzerland -------------------------------------------------

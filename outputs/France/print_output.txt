@@ -18,4 +18,3 @@ in 2016 aggregate volatility decays no faster than n^0.3197208476078453
 in 2017 aggregate volatility decays no faster than n^0.3185738352255291
 in 2018 aggregate volatility decays no faster than n^0.31751390347386216
 in 2019 aggregate volatility decays no faster than n^0.3205149941720935
--------------------------------------- France -------------------------------------------------

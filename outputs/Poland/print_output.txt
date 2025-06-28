@@ -18,4 +18,3 @@ in 2016 aggregate volatility decays no faster than n^0.26838718965158087
 in 2017 aggregate volatility decays no faster than n^0.26698226639334094
 in 2018 aggregate volatility decays no faster than n^0.2675206795856581
 in 2019 aggregate volatility decays no faster than n^0.27084896783139595
--------------------------------------- Poland -------------------------------------------------

@@ -18,4 +18,3 @@ in 2016 aggregate volatility decays no faster than n^0.3229156223617433
 in 2017 aggregate volatility decays no faster than n^0.3106152826413173
 in 2018 aggregate volatility decays no faster than n^0.3196302943868321
 in 2019 aggregate volatility decays no faster than n^0.3263794049543527
--------------------------------------- Latvia -------------------------------------------------

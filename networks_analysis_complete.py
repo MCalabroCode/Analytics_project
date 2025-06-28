@@ -42,6 +42,17 @@ carbon_data = pd.read_csv('tax_data.csv')
 carbon_data.fillna(0.0, inplace=True)
 carbon_data = carbon_data[carbon_data['year'].isin(range(2000, 2020))]
 
+# Function to format pandas dataframe
+def format_value(x):
+    if pd.isnull(x):
+        return ""
+    if isinstance(x, (float, int)):
+        if np.absolute(x) < 0.001:
+            return "<0.001"
+        else:
+            return f"{x:.3f}"
+    return x
+
 def spearmann_correlation_permutate(x,y):
     ''' this calculates the Spearman correlation between x and y
     while performing a permutation test instead of relying on the
@@ -51,7 +62,7 @@ def spearmann_correlation_permutate(x,y):
     def statistic(x): # permute only `x`
         return stats.spearmanr(x, y).statistic
 
-    res_exact = stats.permutation_test((x,), statistic, n_resamples=1000, permutation_type='pairings')
+    res_exact = stats.permutation_test((x,), statistic, n_resamples=5000, permutation_type='pairings')
     return res_exact.statistic, res_exact.pvalue 
 
 
@@ -72,7 +83,7 @@ def analyze_country(country_code, country_name):
 
     # This code saves all print output to a file instead of displaying it on the screen
     import sys
-    #sys.stdout = open(os.path.join(output_dir, "print_output.txt"), "w")
+    sys.stdout = open(os.path.join(output_dir, "print_output.txt"), "w")
 
     # Load the data and calculate degrees
     degrees_per_year = {}
@@ -135,6 +146,7 @@ def analyze_country(country_code, country_name):
     # Create DataFrame from the list
     in_degree_statistics = pd.DataFrame(in_degree_stats_list)
     in_degree_statistics.set_index('Year', inplace=True)
+    in_degree_statistics = in_degree_statistics.map(format_value, na_action = 'ignore')
     save_dataframe(in_degree_statistics, "in_degree_statistics")
     del in_degree_stats_list
     plot_in_degree_density()
@@ -376,6 +388,7 @@ def analyze_country(country_code, country_name):
     # Save the regression results
     regression_GI_results = pd.DataFrame(aus)
     regression_GI_results.set_index('Year', inplace=True)
+    regression_GI_results = regression_GI_results.map(format_value, na_action = 'ignore')
     save_dataframe(regression_GI_results, "regression_GI_results")
 
 
@@ -428,6 +441,7 @@ def analyze_country(country_code, country_name):
     # Save the regression results
     regression_results = pd.DataFrame(aus)
     regression_results.set_index('Year', inplace=True)
+    regression_results = regression_results.map(format_value, na_action = 'ignore')
     save_dataframe(regression_results, "regression_results")
 
     # ======================================================== coefficient of variation
@@ -435,7 +449,7 @@ def analyze_country(country_code, country_name):
     CV = []
     for year, degrees in degrees_per_year.items():
         aus = (1/np.mean(degrees['First-Order Degree']))*np.var(degrees['First-Order Degree'], ddof=1)
-        #print(f"in {year} aggregate volatility decays no faster than n^{(1+aus)/np.sqrt(n)}")
+        print(f"in {year} aggregate volatility decays no faster than n^{(1+aus)/np.sqrt(n)}")
         CV.append(aus)
     CV = np.array(CV)
     fig = plt.figure(figsize=(10, 5))
@@ -452,7 +466,6 @@ def analyze_country(country_code, country_name):
     if country_name in ['New Zealand', 'Italy', 'India', 'Germany', 'China', 'Latvia']:
         pass
     else:
-        print(f'-------------------------------------- {country_name} -------------------------------------------------')
         # sector of interest for carbon taxes
         sectors = ["D","C19","C24","C23","B05_06","C20","H49","F","B07_08"]
 
@@ -544,6 +557,7 @@ def analyze_country(country_code, country_name):
         plt.legend(title='Sectors', bbox_to_anchor=(1.15, 0.7), loc='upper left', frameon=False)
         plt.tight_layout()
         save_plot('centralities_vs_carbon_tax')
+        corr = corr.map(format_value, na_action = 'ignore')
         save_dataframe(corr, 'centralities_correlations')
 
 for country_code, country_name in countries.items():
