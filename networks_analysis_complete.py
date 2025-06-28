@@ -7,8 +7,8 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from scipy.stats import linregress
 import statsmodels.api as sm
+from scipy import stats
 
 # aus stuff
 precision = 4
@@ -36,6 +36,24 @@ countries = {
     'DEU': 'Germany',
     'IND': 'India'
 }
+
+# carbon taxes
+carbon_data = pd.read_csv('tax_data.csv')
+carbon_data.fillna(0.0, inplace=True)
+carbon_data = carbon_data[carbon_data['year'].isin(range(2000, 2020))]
+
+def spearmann_correlation_permutate(x,y):
+    ''' this calculates the Spearman correlation between x and y
+    while performing a permutation test instead of relying on the
+    asymptotic p-value (as is not reliable for small datasets).
+    '''
+
+    def statistic(x): # permute only `x`
+        return stats.spearmanr(x, y).statistic
+
+    res_exact = stats.permutation_test((x,), statistic, n_resamples=1000, permutation_type='pairings')
+    return res_exact.statistic, res_exact.pvalue 
+
 
 def analyze_country(country_code, country_name):
 
@@ -386,7 +404,7 @@ def analyze_country(country_code, country_name):
         n_tail = int(len(sorted_vals))
         x = np.log(sorted_vals[:n_tail])
         y = np.log(np.arange(1, n_tail + 1) - 0.5)
-        slope, intercept, rvalue, _, _ = linregress(x, y)
+        slope, intercept, rvalue, _, _ = stats.linregress(x, y)
         beta_hat = -slope
         return beta_hat, rvalue**2
 
@@ -430,7 +448,102 @@ def analyze_country(country_code, country_name):
     plt.tight_layout()
     save_plot("CV")
 
+    # ======================================================== carbon taxes vs graph centralities
+    if country_name in ['New Zealand', 'Italy', 'India', 'Germany', 'China']:
+        pass
+    else:
+        # sector of interest for carbon taxes
+        sectors = ["D","C19","C24","C23","B05_06","C20","H49","F","B07_08"]
 
+        # carbon taxes
+        carbon_data_selected = carbon_data[carbon_data['jurisdiction']==country_name]
+
+        centralities_per_year = {}
+        for year in range(2000, 2020):
+            data = pd.read_csv(f'data/io_tables/{country_code}{year}ttl.csv', index_col=0)
+            data = data.iloc[:n, :n] 
+            data.index = data.index.str.replace("TTL_", "", regex=False)
+
+            G = nx.DiGraph()
+            for i in data.index:
+                G.add_node(i)
+                for j in data.columns:
+                    weight = data.loc[i, j]
+                    G.add_edge(i, j, weight=weight)
+
+            # Calculate centrality measures
+            in_degrees = dict(G.in_degree(weight="weight"))
+            in_degrees = pd.DataFrame(index=in_degrees.keys(), columns=['In-Degree'], data=in_degrees.values())
+            out_degrees = dict(G.out_degree(weight="weight"))
+            out_degrees = pd.DataFrame(index=out_degrees.keys(), columns=['First-Order Degree'], data=out_degrees.values())
+            betweenness = nx.betweenness_centrality(G, weight='weight', normalized=True)
+            betweenness = pd.DataFrame(index=betweenness.keys(), columns=['Betweenness centrality'], data=betweenness.values())
+            eigenvector = nx.eigenvector_centrality(G, weight='weight', max_iter=1000)
+            eigenvector = pd.DataFrame(index=eigenvector.keys(), columns=['Eigenvector centrality'], data=eigenvector.values())
+
+            # concat
+            centralities = pd.concat([in_degrees, out_degrees, betweenness, eigenvector], axis=1)
+            centralities_per_year[year] = centralities
+        
+        # plot stuff, different from the other plots above
+        colors = [cmap(i / (len(sectors) - 1)) for i in range(len(sectors))]
+        fig, axs = plt.subplots(2, 2, figsize=(18, 10))
+        axs_2 = [[None for _ in range(2)] for _ in range(2)]
+        new_size = 8
+
+        corr = pd.DataFrame()
+        for k, centrality in enumerate(centralities.columns):
+
+            centrality_values = [degrees[centrality] for degrees in centralities_per_year.values()]
+            years = list(centralities_per_year.keys())
+
+            corr_aus = pd.DataFrame(columns=['Sector', centrality, centrality+' pvalue'])
+
+            # Plot mean carbon taxes
+            color = 'slategrey'
+            axs[k//2][k%2].set_xlabel('time (years)')
+            axs[k//2][k%2].set_xticks(years)
+            axs[k//2][k%2].set_ylabel('mean carbon taxes', color=color)
+            axs[k//2][k%2].plot(years, carbon_data_selected['mean_tax'], marker='o', linestyle='-', markersize=5, color=color, linewidth=1.7, alpha=1.)
+            axs[k//2][k%2].tick_params(axis='y', labelcolor=color)
+            axs[k//2][k%2].tick_params(axis='x', labelrotation=45)
+
+            # Create a second y-axis that shares the same x-axis - plot centrality for each sector
+            axs_2[k//2][k%2] = axs[k//2][k%2].twinx()
+            color = 'black'
+            axs_2[k//2][k%2].set_ylabel(f'{centrality}', color=color, rotation=270, labelpad=15)
+            for i, sector in enumerate(sectors):
+                sector_degrees = [aus[sector] for aus in centrality_values]
+                axs_2[k//2][k%2].plot(years, sector_degrees, marker='o', linestyle='dashed', color=colors[i], markersize=3, linewidth=0.8, alpha=0.5, label=economic_sectors[sector])
+
+                # correlation by current centrality measure and carbon taxes
+                aus = spearmann_correlation_permutate(sector_degrees, carbon_data_selected['mean_tax'])
+                corr_aus.loc[len(corr_aus)] = [sector, aus[0], aus[1]]
+
+            if corr.empty:
+                corr = corr_aus
+            else:
+                corr = corr.merge(corr_aus, on='Sector')
+ 
+            axs_2[k//2][k%2].tick_params(axis='y', labelcolor=color)
+
+            axs[k//2][k%2].set_title(f'Mean Carbon Taxes and {centrality}')
+            axs[k//2][k%2].grid(True, which="both", axis='both', ls="--", linewidth=linewidth)
+
+            # fonts
+            axs[k//2][k%2].xaxis.label.set_fontsize(new_size)
+            axs[k//2][k%2].yaxis.label.set_fontsize(new_size)
+            axs_2[k//2][k%2].xaxis.label.set_fontsize(new_size)
+            axs_2[k//2][k%2].yaxis.label.set_fontsize(new_size)
+            # Set tick label font sizes
+            for label in axs[k//2][k%2].get_xticklabels() + axs[k//2][k%2].get_yticklabels() + axs_2[k//2][k%2].get_xticklabels() + axs_2[k//2][k%2].get_yticklabels():
+                label.set_fontsize(new_size)
+
+        fig.suptitle(f'Centrality Measures for {country_name}', fontsize=14)
+        plt.legend(title='Sectors', bbox_to_anchor=(1.15, 0.7), loc='upper left', frameon=False)
+        plt.tight_layout()
+        save_plot('centralities_vs_carbon_tax')
+        save_dataframe(corr, 'centralities_correlations')
 
 for country_code, country_name in countries.items():
     analyze_country(country_code, country_name)
