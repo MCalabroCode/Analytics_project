@@ -22,6 +22,7 @@ n = 45  # number of sectors to consider, constant for all countries and years
 # list of countries
 countries = {
     'SWE': 'Sweden',
+    'ESP': 'Spain',
     'POL': 'Poland',
     'ITA': 'Italy',
     'FRA': 'France',
@@ -463,7 +464,7 @@ def analyze_country(country_code, country_name):
     save_plot("CV")
 
     # ======================================================== carbon taxes vs graph centralities
-    if country_name in ['New Zealand', 'Italy', 'India', 'Germany', 'China', 'Latvia']:
+    if country_name in ['New Zealand', 'Italy', 'India', 'Germany', 'China', 'Latvia', 'Spain']:
         pass
     else:
         # sector of interest for carbon taxes
