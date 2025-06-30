@@ -348,6 +348,24 @@ def analyze_country(country_code, country_name):
 
     plot_ccdf_outer_degrees()
 
+    # ======================================================== coefficient of variation
+
+    CV = []
+    for year, degrees in degrees_per_year.items():
+        aus = (1/np.mean(degrees['First-Order Degree']))*np.var(degrees['First-Order Degree'], ddof=1)
+        print(f"in {year} aggregate volatility decays no faster than n^{(1+aus)/np.sqrt(n)}")
+        CV.append(aus)
+    CV = np.array(CV)
+    fig = plt.figure(figsize=(10, 5))
+    plt.plot(list(degrees_per_year.keys()), CV, marker='o', linestyle='-', markersize=4, color=colors[2], linewidth=1.2, alpha=0.7)
+    plt.title('Coefficient of Variation of First-Order Degree - ' + country_name)
+    plt.xlabel('Year')
+    plt.xticks(list(degrees_per_year.keys()))
+    plt.ylabel('Coefficient of Variation')
+    plt.grid(True, which="both", ls="--", linewidth=linewidth)
+    plt.tight_layout()
+    save_plot("CV")
+
     # ======================================================== regression analysis
 
     # Function to estimate power-law using Gabaix–Ibragimov correction
@@ -370,7 +388,7 @@ def analyze_country(country_code, country_name):
         return x, y, model.predict(X), beta, model.rsquared
 
     aus = []
-    for year, degrees in degrees_per_year.items():
+    for i, (year, degrees) in enumerate(degrees_per_year.items()):
         top_d = degrees['First-Order Degree'].nlargest(int(0.25 * len(degrees)))
         top_q = degrees['Second-Order Degree'].nlargest(int(0.25 * len(degrees)))
 
@@ -383,7 +401,8 @@ def analyze_country(country_code, country_name):
             'First-Order Degree β': round(beta_d, precision),
             'First-Order Degree R²': round(r2_d, precision),
             'Second-Order Degree ζ': round(beta_q, precision),
-            'Second-Order Degree R²': round(r2_q, precision)
+            'Second-Order Degree R²': round(r2_q, precision),
+            'Coefficient of Variation': round(CV[i], precision)
         })
     
     # Save the regression results
@@ -391,26 +410,6 @@ def analyze_country(country_code, country_name):
     regression_GI_results.set_index('Year', inplace=True)
     regression_GI_results = regression_GI_results.map(format_value, na_action = 'ignore')
     save_dataframe(regression_GI_results, "regression_GI_results")
-
-
-    # # plotting the results
-    # fig, axs = plt.subplots(1, 2, figsize=(12, 5))
-    # axs[0].plot(x_d, y_d, 'o', markersize=4, alpha=0.6, label='Empirical')
-    # axs[0].plot(x_d, y_pred_d, 'r-', label=f'Fit: β = {beta_d:.2f}')
-    # axs[0].set_title('Power-law Fit - First-Order Degree')
-    # axs[0].set_xlabel('log(Degree)')
-    # axs[0].set_ylabel('log(Rank - 0.5)')
-    # axs[0].legend()
-    # axs[0].grid(True, which="both", ls="--", linewidth=linewidth)
-    # axs[1].plot(x_q, y_q, 'o', markersize=4, alpha=0.6, label='Empirical')
-    # axs[1].plot(x_q, y_pred_q, 'r-', label=f'Fit: β = {beta_q:.2f}')
-    # axs[1].set_title('Power-law Fit - Second-Order Degree')
-    # axs[1].set_xlabel('log(Degree)')
-    # axs[1].legend()
-    # axs[1].grid(True, which="both", ls="--", linewidth=linewidth)
-    # plt.title('Power-law Fit of Outer Degrees - ' + country_name)
-    # plt.tight_layout()
-    # save_plot("estimated_power_law_params.png")
 
     # other linear regression, less reliable (basic model)
     def plot_ccdf_loglog(values):
@@ -436,7 +435,8 @@ def analyze_country(country_code, country_name):
             'First-Order Degree β': round(beta_d,precision),
             'First-Order Degree R²': round(r2_d, precision),
             'Second-Order Degree ζ': round(beta_q, precision),
-            'Second-Order Degree R²': round(r2_q, precision)
+            'Second-Order Degree R²': round(r2_q, precision),
+            'Coefficient of Variation': round(CV[i])
         })
     
     # Save the regression results
@@ -445,30 +445,12 @@ def analyze_country(country_code, country_name):
     regression_results = regression_results.map(format_value, na_action = 'ignore')
     save_dataframe(regression_results, "regression_results")
 
-    # ======================================================== coefficient of variation
-
-    CV = []
-    for year, degrees in degrees_per_year.items():
-        aus = (1/np.mean(degrees['First-Order Degree']))*np.var(degrees['First-Order Degree'], ddof=1)
-        print(f"in {year} aggregate volatility decays no faster than n^{(1+aus)/np.sqrt(n)}")
-        CV.append(aus)
-    CV = np.array(CV)
-    fig = plt.figure(figsize=(10, 5))
-    plt.plot(list(degrees_per_year.keys()), CV, marker='o', linestyle='-', markersize=4, color=colors[2], linewidth=1.2, alpha=0.7)
-    plt.title('Coefficient of Variation of First-Order Degree - ' + country_name)
-    plt.xlabel('Year')
-    plt.xticks(list(degrees_per_year.keys()))
-    plt.ylabel('Coefficient of Variation')
-    plt.grid(True, which="both", ls="--", linewidth=linewidth)
-    plt.tight_layout()
-    save_plot("CV")
-
     # ======================================================== carbon taxes vs graph centralities
     if country_name in ['New Zealand', 'Italy', 'India', 'Germany', 'China', 'Latvia', 'Spain']:
         pass
     else:
         # sector of interest for carbon taxes
-        sectors = ["D","C19","C24","C23","B05_06","C20","H49","F","B07_08"]
+        sectors = ["D","C19","C24","C23","B05_06","C20","H49","F","B07_08", "H50", "H51", "E"]
 
         # carbon taxes
         carbon_data_selected = carbon_data[carbon_data['jurisdiction']==country_name]
@@ -504,7 +486,7 @@ def analyze_country(country_code, country_name):
         colors = [cmap(i / (len(sectors) - 1)) for i in range(len(sectors))]
         fig, axs = plt.subplots(2, 2, figsize=(18, 10))
         axs_2 = [[None for _ in range(2)] for _ in range(2)]
-        new_size = 8
+        new_size = 9
 
         corr = pd.DataFrame()
         for k, centrality in enumerate(centralities.columns):
@@ -519,7 +501,7 @@ def analyze_country(country_code, country_name):
             axs[k//2][k%2].set_xlabel('time (years)')
             axs[k//2][k%2].set_xticks(years)
             axs[k//2][k%2].set_ylabel('mean carbon taxes', color=color)
-            axs[k//2][k%2].plot(years, carbon_data_selected['mean_tax'], marker='o', linestyle='-', markersize=5, color=color, linewidth=1.7, alpha=1.)
+            axs[k//2][k%2].plot(years, carbon_data_selected['mean_tax'], marker='o', linestyle='-', markersize=5, color=color, linewidth=1.8, alpha=1.)
             axs[k//2][k%2].tick_params(axis='y', labelcolor=color)
             axs[k//2][k%2].tick_params(axis='x', labelrotation=45)
 
@@ -529,7 +511,7 @@ def analyze_country(country_code, country_name):
             axs_2[k//2][k%2].set_ylabel(f'{centrality}', color=color, rotation=270, labelpad=15)
             for i, sector in enumerate(sectors):
                 sector_degrees = [aus[sector] for aus in centrality_values]
-                axs_2[k//2][k%2].plot(years, sector_degrees, marker='o', linestyle='dashed', color=colors[i], markersize=3, linewidth=0.8, alpha=0.5, label=economic_sectors[sector])
+                axs_2[k//2][k%2].plot(years, sector_degrees, marker='o', linestyle='dashed', color=colors[i], markersize=3, linewidth=0.9, alpha=0.7, label=sector)
 
                 # correlation by current centrality measure and carbon taxes
                 aus = spearmann_correlation_permutate(sector_degrees, carbon_data_selected['mean_tax'])
