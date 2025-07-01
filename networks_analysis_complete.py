@@ -7,8 +7,8 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from scipy.stats import linregress
 import statsmodels.api as sm
+from scipy import stats
 
 # aus stuff
 precision = 4
@@ -22,6 +22,7 @@ n = 45  # number of sectors to consider, constant for all countries and years
 # list of countries
 countries = {
     'SWE': 'Sweden',
+    'ESP': 'Spain',
     'POL': 'Poland',
     'ITA': 'Italy',
     'FRA': 'France',
@@ -36,6 +37,35 @@ countries = {
     'DEU': 'Germany',
     'IND': 'India'
 }
+
+# carbon taxes
+carbon_data = pd.read_csv('tax_data.csv')
+carbon_data.fillna(0.0, inplace=True)
+carbon_data = carbon_data[carbon_data['year'].isin(range(2000, 2020))]
+
+# Function to format pandas dataframe
+def format_value(x):
+    if pd.isnull(x):
+        return ""
+    if isinstance(x, (float, int)):
+        if np.absolute(x) < 0.001:
+            return "<0.001"
+        else:
+            return f"{x:.3f}"
+    return x
+
+def spearmann_correlation_permutate(x,y):
+    ''' this calculates the Spearman correlation between x and y
+    while performing a permutation test instead of relying on the
+    asymptotic p-value (as is not reliable for small datasets).
+    '''
+
+    def statistic(x): # permute only `x`
+        return stats.spearmanr(x, y).statistic
+
+    res_exact = stats.permutation_test((x,), statistic, n_resamples=5000, permutation_type='pairings')
+    return res_exact.statistic, res_exact.pvalue 
+
 
 def analyze_country(country_code, country_name):
 
@@ -117,6 +147,7 @@ def analyze_country(country_code, country_name):
     # Create DataFrame from the list
     in_degree_statistics = pd.DataFrame(in_degree_stats_list)
     in_degree_statistics.set_index('Year', inplace=True)
+    in_degree_statistics = in_degree_statistics.map(format_value, na_action = 'ignore')
     save_dataframe(in_degree_statistics, "in_degree_statistics")
     del in_degree_stats_list
     plot_in_degree_density()
@@ -317,6 +348,24 @@ def analyze_country(country_code, country_name):
 
     plot_ccdf_outer_degrees()
 
+    # ======================================================== coefficient of variation
+
+    CV = []
+    for year, degrees in degrees_per_year.items():
+        aus = (1/np.mean(degrees['First-Order Degree']))*np.var(degrees['First-Order Degree'], ddof=1)
+        print(f"in {year} aggregate volatility decays no faster than n^{(1+aus)/np.sqrt(n)}")
+        CV.append(aus)
+    CV = np.array(CV)
+    fig = plt.figure(figsize=(10, 5))
+    plt.plot(list(degrees_per_year.keys()), CV, marker='o', linestyle='-', markersize=4, color=colors[2], linewidth=1.2, alpha=0.7)
+    plt.title('Coefficient of Variation of First-Order Degree - ' + country_name)
+    plt.xlabel('Year')
+    plt.xticks(list(degrees_per_year.keys()))
+    plt.ylabel('Coefficient of Variation')
+    plt.grid(True, which="both", ls="--", linewidth=linewidth)
+    plt.tight_layout()
+    save_plot("CV")
+
     # ======================================================== regression analysis
 
     # Function to estimate power-law using Gabaix–Ibragimov correction
@@ -339,7 +388,7 @@ def analyze_country(country_code, country_name):
         return x, y, model.predict(X), beta, model.rsquared
 
     aus = []
-    for year, degrees in degrees_per_year.items():
+    for i, (year, degrees) in enumerate(degrees_per_year.items()):
         top_d = degrees['First-Order Degree'].nlargest(int(0.25 * len(degrees)))
         top_q = degrees['Second-Order Degree'].nlargest(int(0.25 * len(degrees)))
 
@@ -352,33 +401,15 @@ def analyze_country(country_code, country_name):
             'First-Order Degree β': round(beta_d, precision),
             'First-Order Degree R²': round(r2_d, precision),
             'Second-Order Degree ζ': round(beta_q, precision),
-            'Second-Order Degree R²': round(r2_q, precision)
+            'Second-Order Degree R²': round(r2_q, precision),
+            'Coefficient of Variation': round(CV[i], precision)
         })
     
     # Save the regression results
     regression_GI_results = pd.DataFrame(aus)
     regression_GI_results.set_index('Year', inplace=True)
+    regression_GI_results = regression_GI_results.map(format_value, na_action = 'ignore')
     save_dataframe(regression_GI_results, "regression_GI_results")
-
-
-    # # plotting the results
-    # fig, axs = plt.subplots(1, 2, figsize=(12, 5))
-    # axs[0].plot(x_d, y_d, 'o', markersize=4, alpha=0.6, label='Empirical')
-    # axs[0].plot(x_d, y_pred_d, 'r-', label=f'Fit: β = {beta_d:.2f}')
-    # axs[0].set_title('Power-law Fit - First-Order Degree')
-    # axs[0].set_xlabel('log(Degree)')
-    # axs[0].set_ylabel('log(Rank - 0.5)')
-    # axs[0].legend()
-    # axs[0].grid(True, which="both", ls="--", linewidth=linewidth)
-    # axs[1].plot(x_q, y_q, 'o', markersize=4, alpha=0.6, label='Empirical')
-    # axs[1].plot(x_q, y_pred_q, 'r-', label=f'Fit: β = {beta_q:.2f}')
-    # axs[1].set_title('Power-law Fit - Second-Order Degree')
-    # axs[1].set_xlabel('log(Degree)')
-    # axs[1].legend()
-    # axs[1].grid(True, which="both", ls="--", linewidth=linewidth)
-    # plt.title('Power-law Fit of Outer Degrees - ' + country_name)
-    # plt.tight_layout()
-    # save_plot("estimated_power_law_params.png")
 
     # other linear regression, less reliable (basic model)
     def plot_ccdf_loglog(values):
@@ -386,7 +417,7 @@ def analyze_country(country_code, country_name):
         n_tail = int(len(sorted_vals))
         x = np.log(sorted_vals[:n_tail])
         y = np.log(np.arange(1, n_tail + 1) - 0.5)
-        slope, intercept, rvalue, _, _ = linregress(x, y)
+        slope, intercept, rvalue, _, _ = stats.linregress(x, y)
         beta_hat = -slope
         return beta_hat, rvalue**2
 
@@ -404,33 +435,113 @@ def analyze_country(country_code, country_name):
             'First-Order Degree β': round(beta_d,precision),
             'First-Order Degree R²': round(r2_d, precision),
             'Second-Order Degree ζ': round(beta_q, precision),
-            'Second-Order Degree R²': round(r2_q, precision)
+            'Second-Order Degree R²': round(r2_q, precision),
+            'Coefficient of Variation': round(CV[i])
         })
     
     # Save the regression results
     regression_results = pd.DataFrame(aus)
     regression_results.set_index('Year', inplace=True)
+    regression_results = regression_results.map(format_value, na_action = 'ignore')
     save_dataframe(regression_results, "regression_results")
 
-    # ======================================================== coefficient of variation
+    # ======================================================== carbon taxes vs graph centralities
+    if country_name in ['New Zealand', 'Italy', 'India', 'Germany', 'China', 'Latvia', 'Spain']:
+        pass
+    else:
+        # sector of interest for carbon taxes
+        sectors = ["D","C19","C24","C23","B05_06","C20","H49","F","B07_08", "H50", "H51", "E"]
 
-    CV = []
-    for year, degrees in degrees_per_year.items():
-        aus = (1/np.mean(degrees['First-Order Degree']))*np.var(degrees['First-Order Degree'], ddof=1)
-        print(f"in {year} aggregate volatility decays no faster than n^{(1+aus)/np.sqrt(n)}")
-        CV.append(aus)
-    CV = np.array(CV)
-    fig = plt.figure(figsize=(10, 5))
-    plt.plot(list(degrees_per_year.keys()), CV, marker='o', linestyle='-', markersize=4, color=colors[2], linewidth=1.2, alpha=0.7)
-    plt.title('Coefficient of Variation of First-Order Degree - ' + country_name)
-    plt.xlabel('Year')
-    plt.xticks(list(degrees_per_year.keys()))
-    plt.ylabel('Coefficient of Variation')
-    plt.grid(True, which="both", ls="--", linewidth=linewidth)
-    plt.tight_layout()
-    save_plot("CV")
+        # carbon taxes
+        carbon_data_selected = carbon_data[carbon_data['jurisdiction']==country_name]
 
+        centralities_per_year = {}
+        for year in range(2000, 2020):
+            data = pd.read_csv(f'data/io_tables/{country_code}{year}ttl.csv', index_col=0)
+            data = data.iloc[:n, :n] 
+            data.index = data.index.str.replace("TTL_", "", regex=False)
 
+            G = nx.DiGraph()
+            for i in data.index:
+                G.add_node(i)
+                for j in data.columns:
+                    weight = data.loc[i, j]
+                    G.add_edge(i, j, weight=weight)
+
+            # Calculate centrality measures
+            in_degrees = dict(G.in_degree(weight="weight"))
+            in_degrees = pd.DataFrame(index=in_degrees.keys(), columns=['In-Degree'], data=in_degrees.values())
+            out_degrees = dict(G.out_degree(weight="weight"))
+            out_degrees = pd.DataFrame(index=out_degrees.keys(), columns=['First-Order Degree'], data=out_degrees.values())
+            betweenness = nx.betweenness_centrality(G, weight='weight', normalized=True)
+            betweenness = pd.DataFrame(index=betweenness.keys(), columns=['Betweenness centrality'], data=betweenness.values())
+            eigenvector = nx.eigenvector_centrality(G, weight='weight', max_iter=1000)
+            eigenvector = pd.DataFrame(index=eigenvector.keys(), columns=['Eigenvector centrality'], data=eigenvector.values())
+
+            # concat
+            centralities = pd.concat([in_degrees, out_degrees, betweenness, eigenvector], axis=1)
+            centralities_per_year[year] = centralities
+        
+        # plot stuff, different from the other plots above
+        colors = [cmap(i / (len(sectors) - 1)) for i in range(len(sectors))]
+        fig, axs = plt.subplots(2, 2, figsize=(15, 10))
+        axs_2 = [[None for _ in range(2)] for _ in range(2)]
+        new_size = 9
+
+        corr = pd.DataFrame()
+        for k, centrality in enumerate(centralities.columns):
+
+            centrality_values = [degrees[centrality] for degrees in centralities_per_year.values()]
+            years = list(centralities_per_year.keys())
+
+            corr_aus = pd.DataFrame(columns=['Sector', centrality, centrality+' pvalue'])
+
+            # Plot mean carbon taxes
+            color = 'slategrey'
+            axs[k//2][k%2].set_xlabel('time (years)')
+            axs[k//2][k%2].set_xticks(years)
+            axs[k//2][k%2].set_ylabel('mean carbon taxes', color=color)
+            axs[k//2][k%2].plot(years, carbon_data_selected['mean_tax'], marker='o', linestyle='-', markersize=5, color=color, linewidth=1.8, alpha=1.)
+            axs[k//2][k%2].tick_params(axis='y', labelcolor=color)
+            axs[k//2][k%2].tick_params(axis='x', labelrotation=45)
+
+            # Create a second y-axis that shares the same x-axis - plot centrality for each sector
+            axs_2[k//2][k%2] = axs[k//2][k%2].twinx()
+            color = 'black'
+            axs_2[k//2][k%2].set_ylabel(f'{centrality}', color=color, rotation=270, labelpad=15)
+            for i, sector in enumerate(sectors):
+                sector_degrees = [aus[sector] for aus in centrality_values]
+                axs_2[k//2][k%2].plot(years, sector_degrees, marker='o', linestyle='dashed', color=colors[i], markersize=3, linewidth=0.9, alpha=0.6, label=sector)
+
+                # correlation by current centrality measure and carbon taxes
+                aus = spearmann_correlation_permutate(sector_degrees, carbon_data_selected['mean_tax'])
+                corr_aus.loc[len(corr_aus)] = [sector, aus[0], aus[1]]
+
+            if corr.empty:
+                corr = corr_aus
+            else:
+                corr = corr.merge(corr_aus, on='Sector')
+ 
+            axs_2[k//2][k%2].tick_params(axis='y', labelcolor=color)
+
+            axs[k//2][k%2].set_title(f'Mean Carbon Taxes and {centrality}')
+            axs[k//2][k%2].grid(True, which="both", axis='both', ls="--", linewidth=linewidth)
+
+            # fonts
+            axs[k//2][k%2].xaxis.label.set_fontsize(new_size)
+            axs[k//2][k%2].yaxis.label.set_fontsize(new_size)
+            axs_2[k//2][k%2].xaxis.label.set_fontsize(new_size)
+            axs_2[k//2][k%2].yaxis.label.set_fontsize(new_size)
+            # Set tick label font sizes
+            for label in axs[k//2][k%2].get_xticklabels() + axs[k//2][k%2].get_yticklabels() + axs_2[k//2][k%2].get_xticklabels() + axs_2[k//2][k%2].get_yticklabels():
+                label.set_fontsize(new_size)
+
+        fig.suptitle(f'Centrality Measures for {country_name}', fontsize=14)
+        plt.legend(title='Sectors', bbox_to_anchor=(1.15, 0.7), loc='upper left', frameon=False)
+        plt.tight_layout()
+        save_plot('centralities_vs_carbon_tax')
+        corr = corr.map(format_value, na_action = 'ignore')
+        save_dataframe(corr, 'centralities_correlations')
 
 for country_code, country_name in countries.items():
     analyze_country(country_code, country_name)
