@@ -1,5 +1,6 @@
 
-# this code does the same stuff of network_analysis.py but extended to all the countries and all the years
+# this script execute the same code of network_analysis.ipynb but extend to all the countries and all the years.
+# results are saved into the "output/" folder, separated by country.
 
 import os
 import matplotlib.pyplot as plt
@@ -10,14 +11,14 @@ import seaborn as sns
 import statsmodels.api as sm
 from scipy import stats
 
-# aus stuff
+# aus variables
 precision = 4
 linewidth = 0.4
 color1 = 'orangered'
 color2 = 'royalblue'
 cmap = plt.cm.managua # plasma maybe better
 
-n = 45  # number of sectors to consider, constant for all countries and years
+n = 45  # number of sectors to consider, constant for all countries and years (OECD IO tables)
 
 # list of countries
 countries = {
@@ -93,8 +94,8 @@ def analyze_country(country_code, country_name):
         data = data.iloc[:n, :n] 
         data.index = data.index.str.replace("TTL_", "", regex=False)
         in_degree = data.sum(axis=0)
-        W = data.div(data.sum(axis=0), axis=1).fillna(0) # column normrmalization (not necessary actually)
-        # W = data #TODO: inportant!
+        W = data.div(data.sum(axis=0), axis=1).fillna(0) # column normrmalization (not necessary)
+        # W = data
         first_order_degrees = W.sum(axis=1) # first order degree (out-degree)
         second_order_degrees = W.mul(first_order_degrees, axis=0).sum(axis=0) # second order degree
         first_order_degrees.name = 'First-Order Degree'
@@ -103,19 +104,15 @@ def analyze_country(country_code, country_name):
         degrees = pd.concat([first_order_degrees, second_order_degrees, in_degree], axis=1)
         degrees_per_year[year] = degrees
 
-    # plot stuff
-    selected_years = sorted(list(degrees_per_year.keys()))[::2] # NOTE: to avoid overlaps in plots we just take one year every two years
-    years = [str(year) for year in selected_years] # NOTE: before this was [str(year) for year in degrees_per_year.keys()]
+    # plot auxiliary code - NOTE: to avoid overlaps in plots we just take one every two years
+    selected_years = sorted(list(degrees_per_year.keys()))[::2] 
+    years = [str(year) for year in selected_years] 
     colors = [cmap(i / (len(years) - 1)) for i in range(len(years))]
 
     # ======================================================== indegree analysis
 
     def plot_in_degree_density():
         plt.figure(figsize=(8, 5))
-
-        #ax.axvline(mean-std, color=color1, linestyle='--')
-        #ax.axvline(mean+std, color=color1, linestyle='--')
-        #ax.axvline(mean, color='black', linestyle='-')
 
         plt.title('Empirical Density of Weighted In-Degrees - ' + country_name)
         plt.xlabel('Weighted In-Degree')
@@ -184,7 +181,6 @@ def analyze_country(country_code, country_name):
 
     # ======================================================== top sectors
 
-    # plot with rows = yeras, columns = top 5 sectors
     economic_sectors = {
     "A01_02": "Agriculture, hunting, forestry",
     "A03": "Fishing and aquaculture",
@@ -259,7 +255,7 @@ def analyze_country(country_code, country_name):
     used_sectors = sorted(used_sectors)  # consistent order
 
     # Assign unique indices and colors to ONLY the used sectors
-    palette = sns.color_palette("terrain", n_colors=len(used_sectors)) # palette for used sectors - terrain, tab20
+    palette = sns.color_palette("managua", n_colors=len(used_sectors)) # palette for used sectors - terrain, tab20
     sector_to_index = {sector: i for i, sector in enumerate(used_sectors)} # map sector to an unique index
     sector_to_color = {sector: palette[i] for i, sector in enumerate(used_sectors)} # map sector to a color, via palette
     index_to_sector = {i: sector for sector, i in sector_to_index.items()} # this is the reverse mapping, for the legend
@@ -295,8 +291,6 @@ def analyze_country(country_code, country_name):
         axs[0].set_yticklabels(years)
         axs[1].set_xticks(np.arange(5)+0.5) # +0.5 to center the ticks
         axs[1].set_xticklabels([f'Top {i+1}' for i in range(5)])
-        #axs[1].set_yticks(np.arange(len(years))+0.5)
-        #axs[1].set_yticklabels(years)
 
         # Create legend
         legend_elements = [
@@ -315,6 +309,7 @@ def analyze_country(country_code, country_name):
     # ======================================================== CCDF of outer degrees
 
     def compute_ccdf_direct(data):
+
         # Unique sorted values (ascending)
         values = np.sort(np.unique(data))
         n = len(data)
@@ -368,7 +363,7 @@ def analyze_country(country_code, country_name):
 
     # ======================================================== regression analysis
 
-    # Function to estimate power-law using Gabaix–Ibragimov correction
+    # Function to estimate power-law using Gabaix–Ibragimov rank regression
     def estimate_power_law_gabaix(values, label=''):
 
         # Drop zeros and sort descending
@@ -446,9 +441,11 @@ def analyze_country(country_code, country_name):
     save_dataframe(regression_results, "regression_results")
 
     # ======================================================== carbon taxes vs graph centralities
+
     if country_name in ['New Zealand', 'Italy', 'India', 'Germany', 'China', 'Latvia', 'Spain']:
-        pass
+        pass # no carbon taxes for these countries
     else:
+
         # sector of interest for carbon taxes
         sectors = ["D","C19","C24","C23","B05_06","C20","H49","F","B07_08", "H50", "H51", "E"]
 
@@ -532,6 +529,7 @@ def analyze_country(country_code, country_name):
             axs[k//2][k%2].yaxis.label.set_fontsize(new_size)
             axs_2[k//2][k%2].xaxis.label.set_fontsize(new_size)
             axs_2[k//2][k%2].yaxis.label.set_fontsize(new_size)
+            
             # Set tick label font sizes
             for label in axs[k//2][k%2].get_xticklabels() + axs[k//2][k%2].get_yticklabels() + axs_2[k//2][k%2].get_xticklabels() + axs_2[k//2][k%2].get_yticklabels():
                 label.set_fontsize(new_size)
