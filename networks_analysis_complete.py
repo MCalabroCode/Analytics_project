@@ -484,7 +484,7 @@ def analyze_country(country_code, country_name):
         
         # plot stuff, different from the other plots above
         colors = [cmap(i / (len(sectors) - 1)) for i in range(len(sectors))]
-        fig, axs = plt.subplots(2, 2, figsize=(18, 10))
+        fig, axs = plt.subplots(2, 2, figsize=(15, 10))
         axs_2 = [[None for _ in range(2)] for _ in range(2)]
         new_size = 9
 
@@ -511,7 +511,7 @@ def analyze_country(country_code, country_name):
             axs_2[k//2][k%2].set_ylabel(f'{centrality}', color=color, rotation=270, labelpad=15)
             for i, sector in enumerate(sectors):
                 sector_degrees = [aus[sector] for aus in centrality_values]
-                axs_2[k//2][k%2].plot(years, sector_degrees, marker='o', linestyle='dashed', color=colors[i], markersize=3, linewidth=0.9, alpha=0.7, label=sector)
+                axs_2[k//2][k%2].plot(years, sector_degrees, marker='o', linestyle='dashed', color=colors[i], markersize=3, linewidth=0.9, alpha=0.6, label=sector)
 
                 # correlation by current centrality measure and carbon taxes
                 aus = spearmann_correlation_permutate(sector_degrees, carbon_data_selected['mean_tax'])
